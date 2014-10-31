@@ -19,11 +19,13 @@
 #import "SDWebImageManager.h"
 #import "UIScrollView+EmptyDataSet.h"
 #import "MBProgressHUD.h"
+#import <UIView+MGBadgeView.h>
 
 static NSString *kDZNPhotoCellViewIdentifier = @"kDZNPhotoCellViewIdentifier";
 static NSString *kDZNPhotoFooterViewIdentifier = @"kDZNPhotoFooterViewIdentifier";
 static NSString *kDZNTagCellViewIdentifier = @"kDZNTagCellViewIdentifier";
 static CGFloat kDZNPhotoDisplayMinimumBarHeight = 44.0;
+static CGFloat kPLSBottomViewHeight = 36.0;
 
 @interface DZNPhotoDisplayViewController () <UISearchDisplayDelegate, UISearchBarDelegate,
                                             UICollectionViewDelegateFlowLayout, UITableViewDataSource, UITableViewDelegate,
@@ -43,6 +45,16 @@ static CGFloat kDZNPhotoDisplayMinimumBarHeight = 44.0;
 @property (nonatomic) NSInteger currentPage;
 @property (nonatomic, readonly) NSTimer *searchTimer;
 
+// ------ Modify (Add) ------- //
+@property (nonatomic, readonly) UIView *bottomView;
+/** The left acion button. */
+@property (nonatomic, readonly) UIButton *leftButton;
+/** The right acion button. */
+@property (nonatomic, readonly) UIButton *rightButton;
+@property (nonatomic) int selectCount;
+// ------ End Modify (Add) ------- //
+
+
 @end
 
 @implementation DZNPhotoDisplayViewController
@@ -51,6 +63,7 @@ static CGFloat kDZNPhotoDisplayMinimumBarHeight = 44.0;
 @synthesize loadButton = _loadButton;
 @synthesize activityIndicator = _activityIndicator;
 @synthesize searchTimer = _searchTimer;
+@synthesize bottomView = _bottomView;
 
 - (instancetype)init
 {
@@ -90,6 +103,8 @@ static CGFloat kDZNPhotoDisplayMinimumBarHeight = 44.0;
     
     self.collectionView.backgroundView = [UIView new];
     self.collectionView.backgroundView.backgroundColor = [UIColor whiteColor];
+    self.collectionView.allowsSelection = YES;
+    self.collectionView.allowsMultipleSelection = YES;
     self.collectionView.autoresizingMask = UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleHeight;
     self.collectionView.contentInset = UIEdgeInsetsMake(self.searchBar.frame.size.height+8.0, 0, 0, 0);
     self.collectionView.scrollIndicatorInsets = UIEdgeInsetsMake(self.searchBar.frame.size.height, 0, 0, 0);
@@ -101,6 +116,8 @@ static CGFloat kDZNPhotoDisplayMinimumBarHeight = 44.0;
     [self.collectionView registerClass:[UICollectionReusableView class] forSupplementaryViewOfKind:UICollectionElementKindSectionFooter withReuseIdentifier:kDZNPhotoFooterViewIdentifier];
     
     [self.searchController.searchResultsTableView registerClass:[UITableViewCell class] forCellReuseIdentifier:kDZNTagCellViewIdentifier];
+    
+    [self.view addSubview:self.bottomView];
 }
 
 - (void)viewWillAppear:(BOOL)animated
@@ -201,6 +218,64 @@ Returns the custom collection view layout.
     return _searchBar;
 }
 
+// ----------- Modify (Add) --------------- //
+- (UIView *)bottomView
+{
+    if (!_bottomView)
+    {
+        _bottomView = [UIView new];
+        _bottomView.translatesAutoresizingMaskIntoConstraints = NO;
+        _bottomView.backgroundColor = [UIColor colorWithRed:202.0/255.0 green:202.0/255.0 blue:207.0/255.0 alpha:1.0];
+        
+        _leftButton = [self buttonWithTitle:NSLocalizedString(@"", nil)];
+        [_bottomView addSubview:_leftButton];
+        
+        _rightButton = [self buttonWithTitle:NSLocalizedString(@"Choose", nil)];
+        [_rightButton addTarget:self action:@selector(choosePhoto:) forControlEvents:UIControlEventTouchUpInside];
+        [_bottomView addSubview:_rightButton];
+        
+        
+        
+        NSMutableDictionary *views = [[NSMutableDictionary alloc] initWithDictionary:@{@"leftButton": _leftButton, @"rightButton": _rightButton}];
+        NSDictionary *metrics = @{@"hmargin" : @(13), @"barsHeight": @([UIApplication sharedApplication].statusBarFrame.size.height+self.navigationController.navigationBar.frame.size.height)};
+        
+        [_bottomView addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"H:|-hmargin-[leftButton]" options:0 metrics:metrics views:views]];
+        [_bottomView addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"H:[rightButton]-hmargin-|" options:0 metrics:metrics views:views]];
+        
+        //        [_bottomView addConstraints:[NSLayoutTConstraint constraintsWithVisualFormat:@"V:|-[leftButton]-vmargin-|" options:0 metrics:metrics views:views]];
+        [_bottomView addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"V:|[rightButton]|" options:0 metrics:metrics views:views]];
+        
+    }
+    return _bottomView;
+}
+
+- (void)updateViewConstraints
+{
+    [super updateViewConstraints];
+    
+    NSDictionary *views = [[NSMutableDictionary alloc] initWithDictionary:@{@"bottomView": _bottomView}];
+    
+    [self.view addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"H:|[bottomView]|" options:0 metrics:nil views:views]];
+    
+    [self.view addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:[@[@"V:[bottomView(", @(kPLSBottomViewHeight).stringValue, @")]|"] componentsJoinedByString:@""] options:0 metrics:nil views:views]];
+}
+
+- (UIButton *)buttonWithTitle:(NSString *)title
+{
+    UIButton *button = [UIButton buttonWithType:UIButtonTypeSystem];
+    [button.titleLabel setFont:[UIFont systemFontOfSize:18.0]];
+    [button setTitle:title forState:UIControlStateNormal];
+    [button setTitleColor:[UIColor colorWithRed:0.0 green:122.0/255.0 blue:1.0 alpha:1.0] forState:UIControlStateNormal];
+    [button setTitleColor:[UIColor lightGrayColor] forState:UIControlStateHighlighted];
+    [button setTitleColor:[UIColor lightGrayColor] forState:UIControlStateDisabled];
+    [button setTitleEdgeInsets:UIEdgeInsetsMake(-1.0, 0.0, 0.0, 0.0)];
+    [button setTranslatesAutoresizingMaskIntoConstraints:NO];
+    [button setEnabled:NO];
+    return button;
+}
+// ----------- End Modify (Add) ----------- //
+
+
 /*
  Returns the 'Load More' footer button.
  */
@@ -245,7 +320,8 @@ Returns the custom collection view layout.
  */
 - (CGSize)footerSize
 {
-    return CGSizeMake(0, (self.navigationController.view.frame.size.height > 480.0) ? 60.0 : 50.0);
+//    return CGSizeMake(0, (self.navigationController.view.frame.size.height > 480.0) ? 60.0 : 50.0);
+    return CGSizeMake(0, (self.navigationController.view.frame.size.height > 480.0) ? 60.0 + (kPLSBottomViewHeight / 2) : 50.0 + (kPLSBottomViewHeight / 2));
 }
 
 /*
@@ -274,7 +350,8 @@ Returns the custom collection view layout.
 - (CGSize)contentSize
 {
     CGFloat viewHeight = self.navigationController.view.frame.size.height;
-    CGFloat topBarsHeight = [self topBarsSize].height;
+    CGFloat topBarsHeight = self.navigationController.navigationBarHidden ? 0 : [self topBarsSize].height;
+//    CGFloat topBarsHeight = [self topBarsSize].height;
     return CGSizeMake(self.navigationController.view.frame.size.width, viewHeight-topBarsHeight);
 }
 
@@ -283,17 +360,17 @@ Returns the custom collection view layout.
  */
 - (CGRect)searchBarFrame
 {
-    BOOL shouldShift = _searchBar.showsScopeBar;
-    
-    CGFloat statusHeight = (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPhone) ? [UIApplication sharedApplication].statusBarFrame.size.height : 0.0;
+//    BOOL shouldShift = _searchBar.showsScopeBar;
+//    
+//    CGFloat statusHeight = (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPhone) ? [UIApplication sharedApplication].statusBarFrame.size.height : 0.0;
     
     CGRect frame = CGRectMake(0, 0, self.view.frame.size.width,  kDZNPhotoDisplayMinimumBarHeight);
-    frame.size.height = shouldShift ?  kDZNPhotoDisplayMinimumBarHeight*2 :  kDZNPhotoDisplayMinimumBarHeight;
-    frame.origin.y = shouldShift ? statusHeight : 0.0;
-    
-    if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPhone && !shouldShift) {
-        frame.origin.y += statusHeight+ kDZNPhotoDisplayMinimumBarHeight;
-    }
+//    frame.size.height = shouldShift ?  kDZNPhotoDisplayMinimumBarHeight*2 :  kDZNPhotoDisplayMinimumBarHeight;
+//    frame.origin.y = shouldShift ? statusHeight : 0.0;
+//    
+//    if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPhone && !shouldShift) {
+//        frame.origin.y += statusHeight+ kDZNPhotoDisplayMinimumBarHeight;
+//    }
     
     return frame;
 }
@@ -393,6 +470,11 @@ Returns the custom collection view layout.
     
     CGSize contentSize = self.collectionView.contentSize;
     self.collectionView.contentSize = CGSizeMake(contentSize.width, contentSize.height+[self footerSize].height);
+    
+    if (_currentPage <= 1) {
+        [_rightButton.badgeView setBadgeValue:0];
+        self.selectCount = 0;
+    }
 }
 
 /*
@@ -464,6 +546,7 @@ Returns the custom collection view layout.
     if (_searchTimer) {
         [_searchTimer invalidate];
         _searchTimer = nil;
+        [self setActivityIndicatorsVisible:NO];
     }
 }
 
@@ -495,12 +578,36 @@ Returns the custom collection view layout.
     
     if (!self.navigationController.enablePhotoDownload) {
         
-        [DZNPhotoEditorViewController didFinishPickingOriginalImage:nil
-                                                        editedImage:nil
-                                                           cropRect:CGRectZero
-                                                          zoomScale:1.0
-                                                           cropMode:DZNPhotoEditorViewControllerCropModeNone
-                                                      photoMetadata:metadata];
+//        [DZNPhotoEditorViewController didFinishPickingOriginalImage:nil
+//                                                        editedImage:nil
+//                                                           cropRect:CGRectZero
+//                                                          zoomScale:1.0
+//                                                           cropMode:DZNPhotoEditorViewControllerCropModeNone
+//                                                      photoMetadata:metadata];
+        UICollectionViewCell *cell = [self.collectionView cellForItemAtIndexPath:indexPath];
+        
+        if (metadata.isSelected) {
+            metadata.isSelected = NO;
+            cell.layer.borderWidth = 0.0f;
+            self.selectCount--;
+            [_rightButton.badgeView setBadgeValue:self.selectCount];
+            if (!self.selectCount)
+                [_rightButton setEnabled:NO];
+        } else {
+            metadata.isSelected = YES;
+            CGFloat borderWidth = 6.0f;
+            UIColor * color = [UIColor colorWithRed:254/255.0f green:187/255.0f blue:74/255.0f alpha:1.0f];
+            cell.layer.borderColor = [color CGColor];
+            cell.layer.borderWidth = borderWidth;
+            self.selectCount++;
+            [_rightButton setEnabled:YES];
+            [_rightButton.badgeView setMinDiameter:20];
+            [_rightButton.badgeView setBadgeValue:self.selectCount];
+            [_rightButton.badgeView setBadgePosition:0 y:_rightButton.frame.size.height / 4 * 1];
+            [_rightButton.badgeView setPosition:MGBadgePositionCustom];
+            [_rightButton.badgeView setBadgeColor:[UIColor redColor]];
+            return;
+        }
     }
     else if (self.navigationController.allowsEditing) {
         
@@ -541,6 +648,17 @@ Returns the custom collection view layout.
     }
     
     [self.collectionView deselectItemAtIndexPath:indexPath animated:YES];
+}
+
+- (void)choosePhoto:(id)sender {
+    NSMutableArray *selectMetaDataList = [NSMutableArray array];
+    for (DZNPhotoMetadata *metaData in self.metadataList) {
+        if (metaData.isSelected) {
+            [selectMetaDataList addObject:metaData];
+        }
+    }
+    [self.delegte viewControllerDismissed:selectMetaDataList];
+    [self.navigationController dismissViewControllerAnimated:YES completion:nil];
 }
 
 /*
@@ -644,6 +762,15 @@ Returns the custom collection view layout.
     if (_metadataList.count > 0) {
         DZNPhotoMetadata *metadata = [_metadataList objectAtIndex:indexPath.row];
         [cell setThumbURL:metadata.thumbURL];
+        
+        if (metadata.isSelected) {
+            CGFloat borderWidth = 6.0f;
+            UIColor * color = [UIColor colorWithRed:254/255.0f green:187/255.0f blue:74/255.0f alpha:1.0f];
+            cell.layer.borderColor = [color CGColor];
+            cell.layer.borderWidth = borderWidth;
+        } else {
+            cell.layer.borderWidth = 0.0f;
+        }
     }
 
     return cell;
@@ -661,7 +788,8 @@ Returns the custom collection view layout.
             if (self.isLoading) subview = self.activityIndicator;
             else subview = self.loadButton;
             
-            subview.frame = footer.bounds;
+//            subview.frame = footer.bounds;
+            subview.frame = CGRectMake(footer.bounds.origin.x, footer.bounds.origin.y, footer.bounds.size.width, footer.bounds.size.height - kPLSBottomViewHeight);
             
             if (!subview.superview) {
                 [footer addSubview:subview];
@@ -865,6 +993,20 @@ Returns the custom collection view layout.
     [self shouldSearchPhotos:text];
     [self searchBarShouldShift:NO];
     [self setSearchBarText:text];
+    
+#warning TODO: Cancel Button not enable every place
+    for (UIView *view in searchBar.subviews)
+    {
+        for (id subview in view.subviews)
+        {
+            if ( [subview isKindOfClass:[UIButton class]] )
+            {
+                [subview setEnabled:YES];
+            }
+        }
+    }
+    
+    searchBar.showsCancelButton = YES;
 }
 
 - (void)searchBarCancelButtonClicked:(UISearchBar *)searchBar
@@ -873,6 +1015,8 @@ Returns the custom collection view layout.
     
     [self searchBarShouldShift:NO];
     [self setSearchBarText:text];
+    
+    [self.navigationController dismissViewControllerAnimated:YES completion:nil];
 }
 
 - (void)searchBar:(UISearchBar *)searchBar selectedScopeButtonIndexDidChange:(NSInteger)selectedScope

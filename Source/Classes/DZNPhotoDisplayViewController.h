@@ -12,6 +12,13 @@
 
 @class DZNPhotoPickerController;
 
+@protocol DZNPhotoDisplayViewControllerDelegate <NSObject>
+@optional
+
+- (void) viewControllerDismissed:(NSMutableArray*)photoMetaData;
+
+@end
+
 /**
  The collection view controller in charge of displaying the resulting thumb images.
  */
@@ -25,6 +32,8 @@
 @property (nonatomic, readonly) NSInteger rowCount;
 /** YES if the controller started a request and loading content. */
 @property (nonatomic, readonly, getter = isLoading) BOOL loading;
+
+@property (nonatomic, assign) id<DZNPhotoDisplayViewControllerDelegate> delegte;
 
 /**
  Stops any loading HTTP request.

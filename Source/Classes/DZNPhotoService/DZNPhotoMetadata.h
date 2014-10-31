@@ -39,6 +39,8 @@
 /** The width of the photo. */
 @property (nonatomic, readonly) NSNumber *width;
 
+@property (nonatomic) BOOL isSelected;
+
 /**
  Initializes a new photo metadata instance with request response.
  

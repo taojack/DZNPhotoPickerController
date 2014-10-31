@@ -10,6 +10,7 @@
 
 #import <UIKit/UIKit.h>
 #import "DZNPhotoEditorViewController.h"
+#import "DZNPhotoDisplayViewController.h"
 
 @protocol DZNPhotoPickerControllerDelegate;
 
@@ -26,7 +27,7 @@ typedef void (^DZNPhotoPickerControllerFailureBlock)(DZNPhotoPickerController *p
 typedef void (^DZNPhotoPickerControllerCancellationBlock)(DZNPhotoPickerController *picker);
 
 /** The photo picker's delegate object. */
-@property (nonatomic, assign) id <UINavigationControllerDelegate, DZNPhotoPickerControllerDelegate> delegate;
+@property (nonatomic, assign) id <UINavigationControllerDelegate, DZNPhotoPickerControllerDelegate, DZNPhotoDisplayViewControllerDelegate> delegate;
 /** The photo services to be supported by the controller. Default are 500px & Flickr. */
 @property (nonatomic) DZNPhotoPickerControllerServices supportedServices;
 /** YES if the user is allowed to edit a selected image. Default is NO. */
