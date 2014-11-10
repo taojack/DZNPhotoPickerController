@@ -45,14 +45,12 @@ static CGFloat kPLSBottomViewHeight = 36.0;
 @property (nonatomic) NSInteger currentPage;
 @property (nonatomic, readonly) NSTimer *searchTimer;
 
-// ------ Modify (Add) ------- //
 @property (nonatomic, readonly) UIView *bottomView;
 /** The left acion button. */
 @property (nonatomic, readonly) UIButton *leftButton;
 /** The right acion button. */
 @property (nonatomic, readonly) UIButton *rightButton;
 @property (nonatomic) int selectCount;
-// ------ End Modify (Add) ------- //
 
 
 @end
@@ -218,7 +216,6 @@ Returns the custom collection view layout.
     return _searchBar;
 }
 
-// ----------- Modify (Add) --------------- //
 - (UIView *)bottomView
 {
     if (!_bottomView)
@@ -227,7 +224,8 @@ Returns the custom collection view layout.
         _bottomView.translatesAutoresizingMaskIntoConstraints = NO;
         _bottomView.backgroundColor = [UIColor colorWithRed:202.0/255.0 green:202.0/255.0 blue:207.0/255.0 alpha:1.0];
         
-        _leftButton = [self buttonWithTitle:NSLocalizedString(@"", nil)];
+        _leftButton = [self buttonWithTitle:NSLocalizedString(@"Clear", nil)];
+//        [_leftButton addTarget:self action:@selector(clearPhoto:) forControlEvents:UIControlEventTouchUpInside];
         [_bottomView addSubview:_leftButton];
         
         _rightButton = [self buttonWithTitle:NSLocalizedString(@"Choose", nil)];
@@ -239,10 +237,10 @@ Returns the custom collection view layout.
         NSMutableDictionary *views = [[NSMutableDictionary alloc] initWithDictionary:@{@"leftButton": _leftButton, @"rightButton": _rightButton}];
         NSDictionary *metrics = @{@"hmargin" : @(13), @"barsHeight": @([UIApplication sharedApplication].statusBarFrame.size.height+self.navigationController.navigationBar.frame.size.height)};
         
-        [_bottomView addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"H:|-hmargin-[leftButton]" options:0 metrics:metrics views:views]];
+//        [_bottomView addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"H:|-hmargin-[leftButton]" options:0 metrics:metrics views:views]];
         [_bottomView addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"H:[rightButton]-hmargin-|" options:0 metrics:metrics views:views]];
         
-        //        [_bottomView addConstraints:[NSLayoutTConstraint constraintsWithVisualFormat:@"V:|-[leftButton]-vmargin-|" options:0 metrics:metrics views:views]];
+//        [_bottomView addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"V:|-[leftButton]-|" options:0 metrics:metrics views:views]];
         [_bottomView addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"V:|[rightButton]|" options:0 metrics:metrics views:views]];
         
     }
@@ -273,8 +271,6 @@ Returns the custom collection view layout.
     [button setEnabled:NO];
     return button;
 }
-// ----------- End Modify (Add) ----------- //
-
 
 /*
  Returns the 'Load More' footer button.
@@ -464,7 +460,6 @@ Returns the custom collection view layout.
     if (!_metadataList) _metadataList = [NSMutableArray new];
     
     [_metadataList addObjectsFromArray:list];
-    
     [self.collectionView reloadData];
 //    [self.collectionView reloadDataSetIfNeeded];
     
@@ -561,6 +556,26 @@ Returns the custom collection view layout.
     [self.collectionView reloadData];
 }
 
+- (void)showCancelButtonForSearchBar:(UISearchBar *)searchBar {
+    [searchBar setShowsCancelButton:YES animated:YES];
+    [self enableCancelButton:searchBar];
+}
+
+- (BOOL)enableCancelButton:(UIView *)view {
+    if ([view isKindOfClass:[UIButton class]])
+    {
+        [(UIButton*)view setEnabled:YES];
+        return YES;
+    } else {
+        for (UIView *subview in view.subviews) {
+            if ([self enableCancelButton:subview]) {
+                return YES;
+            }
+        }
+    }
+    return NO;
+}
+
 
 #pragma mark - DZNPhotoDisplayController methods
 
@@ -578,12 +593,6 @@ Returns the custom collection view layout.
     
     if (!self.navigationController.enablePhotoDownload) {
         
-//        [DZNPhotoEditorViewController didFinishPickingOriginalImage:nil
-//                                                        editedImage:nil
-//                                                           cropRect:CGRectZero
-//                                                          zoomScale:1.0
-//                                                           cropMode:DZNPhotoEditorViewControllerCropModeNone
-//                                                      photoMetadata:metadata];
         UICollectionViewCell *cell = [self.collectionView cellForItemAtIndexPath:indexPath];
         
         if (metadata.isSelected) {
@@ -648,6 +657,11 @@ Returns the custom collection view layout.
     }
     
     [self.collectionView deselectItemAtIndexPath:indexPath animated:YES];
+}
+
+- (void)clearPhoto:(id)sender {
+    NSMutableArray *selectMetaDataList = [NSMutableArray array];
+    [self.delegte viewControllerDismissed:selectMetaDataList];
 }
 
 - (void)choosePhoto:(id)sender {
@@ -768,6 +782,7 @@ Returns the custom collection view layout.
             UIColor * color = [UIColor colorWithRed:254/255.0f green:187/255.0f blue:74/255.0f alpha:1.0f];
             cell.layer.borderColor = [color CGColor];
             cell.layer.borderWidth = borderWidth;
+            [cell setHighlighted:YES];
         } else {
             cell.layer.borderWidth = 0.0f;
         }
@@ -819,6 +834,7 @@ Returns the custom collection view layout.
 {
     if ([_searchBar isFirstResponder]) {
         [_searchBar resignFirstResponder];
+        [self showCancelButtonForSearchBar:_searchBar];
         [self performSelector:@selector(selectedItemAtIndexPath:) withObject:indexPath afterDelay:0.3];
     }
     else [self selectedItemAtIndexPath:indexPath];
@@ -916,7 +932,6 @@ Returns the custom collection view layout.
     }
     
     cell.textLabel.text = text;
-    
     return cell;
 }
 
@@ -993,20 +1008,6 @@ Returns the custom collection view layout.
     [self shouldSearchPhotos:text];
     [self searchBarShouldShift:NO];
     [self setSearchBarText:text];
-    
-#warning TODO: Cancel Button not enable every place
-    for (UIView *view in searchBar.subviews)
-    {
-        for (id subview in view.subviews)
-        {
-            if ( [subview isKindOfClass:[UIButton class]] )
-            {
-                [subview setEnabled:YES];
-            }
-        }
-    }
-    
-    searchBar.showsCancelButton = YES;
 }
 
 - (void)searchBarCancelButtonClicked:(UISearchBar *)searchBar
@@ -1035,7 +1036,7 @@ Returns the custom collection view layout.
 
 - (void)searchDisplayControllerDidBeginSearch:(UISearchDisplayController *)controller
 {
-    
+    [self showCancelButtonForSearchBar:self.searchBar];
 }
 
 - (void)searchDisplayControllerWillEndSearch:(UISearchDisplayController *)controller
@@ -1048,7 +1049,7 @@ Returns the custom collection view layout.
 
 - (void)searchDisplayControllerDidEndSearch:(UISearchDisplayController *)controller
 {
-    
+    [self showCancelButtonForSearchBar:self.searchBar];
 }
 
 - (void)searchDisplayController:(UISearchDisplayController *)controller didLoadSearchResultsTableView:(UITableView *)tableView
