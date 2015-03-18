@@ -19,7 +19,7 @@
 #import "SDWebImageManager.h"
 #import "UIScrollView+EmptyDataSet.h"
 #import "MBProgressHUD.h"
-#import <UIView+MGBadgeView.h>
+#import "UIView+MGBadgeView.h"
 
 static NSString *kDZNPhotoCellViewIdentifier = @"kDZNPhotoCellViewIdentifier";
 static NSString *kDZNPhotoFooterViewIdentifier = @"kDZNPhotoFooterViewIdentifier";
