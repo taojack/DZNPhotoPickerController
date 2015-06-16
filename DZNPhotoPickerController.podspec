@@ -19,7 +19,7 @@ Pod::Spec.new do |s|
                               '#import <SystemConfiguration/SystemConfiguration.h>'
 
   s.header_mappings_dir = 'Source'
-  s.dependency 'AFNetworking', "2.3.1"
+  s.dependency 'AFNetworking', "2.4.1"
   s.dependency 'GROAuth2SessionManager', "0.2.3"
   s.dependency 'SDWebImage', "3.7.1"
   s.dependency 'MBProgressHUD', "0.9"
